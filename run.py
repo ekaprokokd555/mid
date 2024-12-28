@@ -1,15 +1,39 @@
 from midiutil import MIDIFile
 import random
 
-def generate_music(file_name, genre="default", duration=30):
-    # Set up MIDI file
-    midi = MIDIFile(1)  # One track
-    track = 0  # Track number
-    time = 0  # Start at the beginning
-    midi.addTrackName(track, time, "Generated Music")
-    midi.addTempo(track, time, 120)  # Default tempo
+def generate_track(file_name, scale, instrument_type, duration=30, channel=0):
+    # Set up a single-track MIDI file
+    midi = MIDIFile(1)
+    track = 0
+    time = 0
+    midi.addTrackName(track, time, instrument_type)
+    midi.addTempo(track, time, 120)
 
-    # Genre-based configuration
+    for i in range(duration * 4):  # 4 beats per second
+        note = random.choice(scale)
+
+        # Modify note based on instrument type
+        if instrument_type == "bass":
+            note -= 12  # Lower octave
+        elif instrument_type == "chorus":
+            note += 12  # Higher octave
+        elif instrument_type == "beat":
+            note = random.choice([35, 36, 38, 40])  # Drum kit MIDI notes
+
+        duration = random.choice([0.25, 0.5, 1])
+        volume = random.randint(50, 100) if instrument_type != "beat" else random.randint(70, 110)
+        midi.addNote(track, channel, note, time, duration, volume)
+
+        time += 0.25  # Increment time by quarter note
+
+    # Write to file
+    with open(file_name, "wb") as output_file:
+        midi.writeFile(output_file)
+
+    print(f"{instrument_type.capitalize()} track saved to {file_name}")
+
+def generate_music_all_parts(base_name, genre="default", duration=30):
+    # Define scales for different genres
     scales = {
         "default": [60, 62, 64, 65, 67, 69, 71, 72],  # C major scale
         "jazz": [60, 63, 65, 66, 69, 72, 75, 78],     # Jazz scale
@@ -19,23 +43,16 @@ def generate_music(file_name, genre="default", duration=30):
         "electronic": [60, 62, 63, 65, 68, 72, 75],  # Electronic feel
     }
 
-    # Choose scale based on genre
+    # Get scale for the specified genre
     scale = scales.get(genre.lower(), scales["default"])
 
-    # Generate random notes
-    for i in range(duration * 4):  # 4 beats per second
-        pitch = random.choice(scale)
-        duration = random.choice([0.25, 0.5, 1, 2])  # Note duration in beats
-        volume = random.randint(50, 100)  # Note volume
+    # Generate individual tracks
+    generate_track(f"{base_name}_bass.mid", scale, "bass", duration)
+    generate_track(f"{base_name}_piano.mid", scale, "piano", duration)
+    generate_track(f"{base_name}_chorus.mid", scale, "chorus", duration)
+    generate_track(f"{base_name}_beat.mid", scale, "beat", duration, channel=9)  # Percussion channel
 
-        midi.addNote(track, 0, pitch, time, duration, volume)
-        time += duration
-
-    # Write to file
-    with open(file_name, "wb") as output_file:
-        midi.writeFile(output_file)
-
-    print(f"Music generated and saved to {file_name}")
+    print(f"All tracks for {genre} genre saved as separate files.")
 
 # Example usage
-generate_music("output_music.mid", genre="jazz", duration=60)
+generate_music_all_parts("output_music", genre="jazz", duration=60)
